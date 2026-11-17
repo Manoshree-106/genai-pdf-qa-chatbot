@@ -22,46 +22,50 @@ Objective: To make information retrieval from PDF documents faster, easier, and 
 
 ### PROGRAM:
 ```
-from langchain_community.document_loaders import PyPDFLoader
-from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langchain_openai import OpenAIEmbeddings, ChatOpenAI
-from langchain_community.vectorstores import Chroma
+import os
+from dotenv import load_dotenv
+from langchain.document_loaders import PyPDFLoader
+from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain.embeddings.openai import OpenAIEmbeddings
+from langchain.vectorstores import DocArrayInMemorySearch
+from langchain.chat_models import ChatOpenAI
 from langchain.chains import RetrievalQA
 
-# 1. Load PDF
-loader = PyPDFLoader("Generative_AI_Study_Guide_10_Pages.pdf")
+# Load API Key
+load_dotenv()
+
+# Load PDF
+loader = PyPDFLoader("AI_Notes.pdf")
 documents = loader.load()
 
-# 2. Split text into chunks
-text_splitter = RecursiveCharacterTextSplitter(
-    chunk_size=1000,
-    chunk_overlap=150
-)
+# Split PDF into chunks
+text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=100)
 docs = text_splitter.split_documents(documents)
 
-# 3. Create embeddings and store in ChromaDB
-embedding = OpenAIEmbeddings()
-vectordb = Chroma.from_documents(
-    documents=docs,
-    embedding=embedding,
-    persist_directory="docs/chroma"
+# Create Vector Database
+embeddings = OpenAIEmbeddings()
+db = DocArrayInMemorySearch.from_documents(docs, embeddings)
+
+# Create QA Chain
+qa = RetrievalQA.from_chain_type(
+    llm=ChatOpenAI(temperature=0),
+    retriever=db.as_retriever()
 )
 
-# 4. Retrieve relevant information
-llm = ChatOpenAI(model_name="gpt-4o-mini", temperature=0)
-qa_chain = RetrievalQA.from_chain_type(
-    llm=llm,
-    retriever=vectordb.as_retriever(search_kwargs={"k": 3})
-)
+# Ask Questions
+while True:
+    question = input("You: ")
 
-# 5. Generate and display answer
-question = "What is Generative AI?"
-result = qa_chain.invoke({"query": question})
-print("Question:", question)
-print("Answer:", result["result"])
+    if question.lower() == "exit":
+        break
+
+    answer = qa.run(question)
+    print("Bot:", answer)
+
 ```
 ### OUTPUT:
-<img width="1930" height="815" alt="image" src="https://github.com/user-attachments/assets/5f7d5217-877d-4e83-9c15-d950bda1f903" />
+<img width="1600" height="1259" alt="image" src="https://github.com/user-attachments/assets/0c4568ec-3581-4407-87f3-8b2890bf4167" />
+
 
 ### RESULT:
 The AI-powered PDF Question Answering Chatbot was successfully developed using LangChain, OpenAI, and ChromaDB. It extracts text from PDF documents, stores the text as embeddings, and retrieves relevant information based on user questions. The chatbot generates answers in natural language, making information retrieval faster, easier, and more efficient.
